@@ -1,0 +1,15 @@
+# ============ 可选依赖（启用真实模型/向量库/Agent 时安装） ============
+# 真实 LLM / 嵌入（OpenAI 兼容接口已内置，无需额外包）
+# 生产向量库
+chromadb>=0.5.0
+# RAG / Agent 编排框架
+langchain>=0.3.0
+langchain-community>=0.3.0
+langgraph>=0.2.0
+# 文档解析
+pypdf>=4.2.0
+python-docx>=1.1.0
+# 真实嵌入模型（本地 BGE/E5，可选）
+sentence-transformers>=3.0.0
+# 重排序交叉编码器（RERANK_PROVIDER=cross_encoder 时使用，复用 sentence-transformers）
+# 推荐 model: BAAI/bge-reranker-base 或 BAAI/bge-reranker-v2-m3

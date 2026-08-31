@@ -1,0 +1,33 @@
+# =========================================================
+# 生产环境编排：多 worker、关闭热重载、Chroma 持久化、鉴权开启
+#
+# 使用方式：
+#   1. 复制 .env.production.example 为 .env.production 并填写真实值
+#   2. docker compose -f docker-compose.prod.yml up -d --build
+# =========================================================
+
+services:
+  backend:
+    build: ./backend
+    container_name: intl-trade-backend
+    # 多 worker 提升并发；_worker 数按 CPU 核数调整
+    command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8009", "--workers", "4"]
+    env_file:
+      - .env.production
+    volumes:
+      - ./backend/data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8009/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    container_name: intl-trade-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

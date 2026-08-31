@@ -1,0 +1,35 @@
+version: "3.9"
+
+# =========================================================
+# 国际贸易上市公司一站式智能服务平台 —— 本地开发编排
+# 生产环境建议替换为 Kubernetes + Milvus + 独立 LLM 推理节点
+# =========================================================
+
+services:
+  backend:
+    build: ./backend
+    container_name: intl-trade-backend
+    ports:
+      - "8009:8009"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:///./data/app.db
+      - CHROMA_PERSIST_DIR=./data/chroma
+    volumes:
+      - ./backend/data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8009/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    container_name: intl-trade-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
