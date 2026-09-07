@@ -4,6 +4,13 @@
 
 > 当前仓库为**可运行脚手架**：LLM 主接入 **小米 MiMo V2.5**（`mimo-v2.5-pro`，备用 DeepSeek 故障转移），Embedding / 向量库默认 Mock / 内存（无需额外 Key 即可启动）；未配置 Key 时 LLM 自动降级 Mock，保证全流程可跑通。
 
+## 📸 界面预览
+
+| 智能客服（RAG + Agent） | 智能文案 | 翻译引擎 |
+|:---:|:---:|:---:|
+| ![智能客服](docs/screenshots/chat.png) | ![智能文案](docs/screenshots/copywriting.png) | ![翻译引擎](docs/screenshots/translation.png) |
+
+
 ---
 
 ## ✨ 核心能力
