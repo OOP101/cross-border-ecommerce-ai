@@ -47,6 +47,21 @@ class BaseLLM(ABC):
         """流式生成，逐段产出文本。默认退化为一次性生成。"""
         yield self.generate(prompt, system=system, task=task, **kwargs).content
 
+    def stream_events(
+        self,
+        prompt: str,
+        system: Optional[str] = None,
+        task: Optional[str] = None,
+        **kwargs,
+    ) -> Iterator[tuple]:
+        """流式事件序列，每项为 (kind, text)：
+          - ("reasoning", ...)：模型的思考过程片段（推理型模型如 DeepSeek-R / MiMo-V2.5-Pro 在正式回答前产出）；
+          - ("content", ...)：最终答案正文增量。
+        供 SSE 直推场景使用：客户端在思考期即有反馈，不会长时间停留在“正在思考”而无事件。
+        默认实现退化为一次性 content 事件（兼容 Mock 等非推理实现的基础行为）。
+        """
+        yield ("content", self.generate(prompt, system=system, task=task, **kwargs).content)
+
     async def agenerate(
         self,
         prompt: str,

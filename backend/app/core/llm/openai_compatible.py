@@ -100,7 +100,12 @@ class OpenAICompatibleLLM(BaseLLM):
         raise last_exc
 
     # ---- 流式 ----
-    def _stream_single(self, base_url, api_key, model, prompt, system, **kwargs):
+    def _stream_single_events(self, base_url, api_key, model, prompt, system, **kwargs):
+        """单端点流式事件：逐段产出 (kind, text)。
+        kind ∈ {"reasoning", "content"}：推理型模型（DeepSeek-R、小米 MiMo-V2.5-Pro 等）
+        思考期 `delta.content` 为空、`delta.reasoning_content` 持续产出；
+        两类都实时转发，客户端在思考期即可感知连接与进度，不会“假死”。
+        """
         url = f"{base_url}/chat/completions"
         payload = self._build_payload(prompt, system, model=model, **kwargs)
         payload["stream"] = True
@@ -120,18 +125,22 @@ class OpenAICompatibleLLM(BaseLLM):
                     except json.JSONDecodeError:
                         continue
                     choices = chunk.get("choices") or [{}]
-                    piece = (choices[0].get("delta") or {}).get("content")
+                    delta = choices[0].get("delta") or {}
+                    reasoning = delta.get("reasoning_content")
+                    if reasoning:
+                        yield ("reasoning", reasoning)
+                    piece = delta.get("content")
                     if piece:
-                        yield piece
+                        yield ("content", piece)
 
-    def generate_stream(self, prompt, system=None, **kwargs) -> Iterator[str]:
-        """流式生成：在首个片段返回前的异常可触发端点切换；
+    def _iter_events(self, prompt, system=None, **kwargs) -> Iterator[tuple]:
+        """事件流主循环：首个事件前的异常可触发端点切换；
         已开始产出后发生异常则直接抛出（重开会重复内容）。"""
         last_exc: Optional[Exception] = None
         for idx, (base_url, api_key, model) in enumerate(self._endpoints()):
             try:
-                stream = self._stream_single(base_url, api_key, model, prompt, system, **kwargs)
-                first = next(stream)  # 连接 + 首片段阶段暴露端点异常
+                stream = self._stream_single_events(base_url, api_key, model, prompt, system, **kwargs)
+                first = next(stream)  # 连接 + 首事件阶段暴露端点异常
             except StopIteration:
                 return
             except Exception as e:  # noqa: BLE001
@@ -147,3 +156,13 @@ class OpenAICompatibleLLM(BaseLLM):
             return
         if last_exc:
             raise last_exc
+
+    def stream_events(self, prompt, system=None, **kwargs) -> Iterator[tuple]:
+        """流式事件：(kind, text)，kind ∈ reasoning | content。"""
+        return self._iter_events(prompt, system=system, **kwargs)
+
+    def generate_stream(self, prompt, system=None, **kwargs) -> Iterator[str]:
+        """仅取最终答案正文增量（不输出思考过程），向后兼容历史调用方。"""
+        for kind, piece in self._iter_events(prompt, system=system, **kwargs):
+            if kind == "content":
+                yield piece

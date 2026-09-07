@@ -34,7 +34,11 @@
             {{ msg.role === 'user' ? '我' : 'AI' }}
           </div>
           <div class="bubble-wrap">
-            <div class="bubble">{{ msg.role === 'assistant' && !msg.content ? '正在思考…' : msg.content }}</div>
+            <div class="bubble" :class="{ thinking: msg.role === 'assistant' && !msg.content }">
+              <template v-if="msg.content">{{ msg.content }}</template>
+              <template v-else-if="msg.thinking">正在思考…（已分析 {{ msg.reasoned || 0 }} 字）</template>
+              <template v-else>正在思考…</template>
+            </div>
             <div v-if="msg.intent" class="meta">
               <el-tag size="small" type="primary" effect="plain">意图：{{ intentLabel(msg.intent) }}</el-tag>
               <el-tag v-if="msg.need_human" size="small" type="danger" effect="plain">已转人工</el-tag>
@@ -140,8 +144,9 @@ const send = async (evt, presetText) => {
   messages.value.push({ role: 'user', content: text })
   if (!presetText) input.value = ''
   loading.value = true
-  // 流式：先占位一条空回复，随 SSE delta 逐段填充
-  const assistant = { role: 'assistant', content: '', intent: '', need_human: false, sources: [] }
+  // 流式：先占位一条空回复，随 SSE 事件逐段填充
+  // 状态机：无事件=thinking 占位 → reasoning 事件=推理中(thinking) → delta=正文打字机 → meta=完成
+  const assistant = { role: 'assistant', content: '', thinking: false, thinkingAt: 0, reasoned: 0, intent: '', need_human: false, sources: [] }
   messages.value.push(assistant)
   await scrollBottom()
   try {
@@ -170,7 +175,17 @@ const send = async (evt, presetText) => {
         const dataLine = lines.find((l) => l.startsWith('data:'))
         if (!dataLine) continue
         const data = JSON.parse(dataLine.slice(5).trim())
-        if (event === 'delta') {
+        if (event === 'reasoning') {
+          // 推理型模型思考期：只累计进度并切换为“推理中”动效，
+          // 不渲染推理原文（避免向终端用户暴露提示词/检索上下文）。
+          assistant.thinking = true
+          assistant.reasoned += (data.text || '').length
+          if (!assistant.thinkingAt) {
+            assistant.thinkingAt = Date.now()
+            await scrollBottom()
+          }
+        } else if (event === 'delta') {
+          assistant.thinking = false
           assistant.content += data.text
           await scrollBottom()
         } else if (event === 'meta') {
@@ -314,6 +329,10 @@ const send = async (evt, presetText) => {
 .msg-row.user .bubble {
   background: #409eff;
   color: #fff;
+}
+.bubble.thinking {
+  color: #909399;
+  font-size: 13px;
 }
 .meta {
   margin-top: 6px;

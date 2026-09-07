@@ -38,8 +38,9 @@ def chat_stream(req: ChatRequest, user: dict = Depends(require_user)):
     """RAG 智能问答（SSE 流式）。
 
     事件序列：
-      delta: {"text": "..."}  —— 增量回答片段，可多条
-      meta : {"conversation_id", "intent", "need_human", "sources", "latency_ms"}
+      reasoning: {"text": "..."} —— 思考过程增量（推理型模型在正文前产出，用于思考期反馈）
+      delta    : {"text": "..."} —— 最终答案正文增量，可多条
+      meta     : {"conversation_id", "intent", "need_human", "sources", "latency_ms"}
     """
     session_id = req.session_id or "default"
     tenant_id = user["tenant_id"]
@@ -54,11 +55,15 @@ def chat_stream(req: ChatRequest, user: dict = Depends(require_user)):
             yield _sse("delta", {"text": answer_text})
         else:
             answer_text = ""
-            for piece in get_llm().generate_stream(
+            for kind, piece in get_llm().stream_events(
                 prepared["prompt"], system=chat_service.SYSTEM_PROMPT, task="chat"
             ):
-                answer_text += piece
-                yield _sse("delta", {"text": piece})
+                if kind == "reasoning":
+                    # 思考阶段实时转发：客户端据此切换为“推理中”动效并展示进度
+                    yield _sse("reasoning", {"text": piece})
+                else:
+                    answer_text += piece
+                    yield _sse("delta", {"text": piece})
 
         latency_ms = int((time.time() - start) * 1000)
         # 流式接口暂无法拿到服务端 usage，按估算降级（见 core.llm.base.extract_usage）

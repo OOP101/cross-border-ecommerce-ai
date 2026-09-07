@@ -83,3 +83,10 @@ class MockLLM(BaseLLM):
         for piece in re.split(r"(?<=[。！？\n])", content):
             if piece:
                 yield piece
+
+    def stream_events(self, prompt, system=None, task=None, **kwargs):
+        """Mock 无推理过程，全部作为 content 事件逐步产出。"""
+        content = self.generate(prompt, system=system, task=task, **kwargs).content
+        for piece in re.split(r"(?<=[。！？\n])", content):
+            if piece:
+                yield ("content", piece)

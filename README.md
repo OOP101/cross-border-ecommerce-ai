@@ -2,7 +2,7 @@
 
 基于 **MoPaaS 大模型应用引擎 + RAG + Agent** 打造的一站式外贸智能服务平台，帮助外贸企业「单人驾驭多语言交流」，显著降低对外贸业务员岗位的依赖。
 
-> 当前仓库为**可运行脚手架**：LLM 默认接入 **DeepSeek**（`deepseek-v4-pro`），Embedding / 向量库默认 Mock / 内存（无需额外 Key 即可启动）；未配置 Key 时 LLM 自动降级 Mock，保证全流程可跑通。
+> 当前仓库为**可运行脚手架**：LLM 主接入 **小米 MiMo V2.5**（`mimo-v2.5-pro`，备用 DeepSeek 故障转移），Embedding / 向量库默认 Mock / 内存（无需额外 Key 即可启动）；未配置 Key 时 LLM 自动降级 Mock，保证全流程可跑通。
 
 ---
 
@@ -30,7 +30,7 @@ RAG检索层    问题解析 | 混合检索(BM25+向量) | 重排序 | 上下文
 数据模型层   向量库 | 知识库 | LLM推理引擎 | 翻译模型 | 缓存
 ```
 
-详细设计见 [docs/项目大纲.md](docs/项目大纲.md)。
+详细设计见 [docs/02-需求进度/项目大纲.md](docs/02-需求进度/项目大纲.md)。
 
 ---
 
@@ -40,7 +40,21 @@ RAG检索层    问题解析 | 混合检索(BM25+向量) | 重排序 | 上下文
 - Python ≥ 3.11（推荐 3.13）
 - Node.js ≥ 18（前端开发）
 
-### 1. 启动后端
+### 一键启动（推荐）
+
+双击 `start.bat`，或命令行运行：
+
+```bash
+python launcher.py            # 交互菜单
+python launcher.py start      # 启动（依赖未变化时秒级启动，自动打开浏览器）
+python launcher.py stop       # 一键停止前后端服务
+python launcher.py restart    # 重启
+python launcher.py status     # 查看服务运行状态
+```
+
+v2 启动器特性：依赖缓存（requirements.txt / package.json 未变化则跳过安装）、一键停止（按端口反查 PID）、端口被占用时可交互式释放、彩色状态输出。Windows 下也可直接双击 `start.bat` / `stop.bat` / `status.bat`。
+
+### 1. 启动后端（手动方式）
 
 ```bash
 cd backend
@@ -73,14 +87,18 @@ npm run dev
 
 ### 3. 配置真实大模型（可选）
 
-项目默认已切换为 **DeepSeek**（真实 Key 已写入 `backend/.env`，被 git 忽略）。如需更换模型或 Key，修改：
+项目当前 LLM 主接入 **小米 MiMo**（真实 Key 已写入 `.env` 与 `backend/.env`，均被 git 忽略），备用 **DeepSeek** 自动故障转移。如需更换模型或 Key，修改 `.env` / `backend/.env`：
 
 ```ini
 LLM_PROVIDER=openai_compatible
-LLM_API_KEY=sk-你的DeepSeekKey
-LLM_BASE_URL=https://api.deepseek.com/v1
-# deepseek-v4-pro（旗舰首选）/ deepseek-v4-flash（均衡性价比首选）
-LLM_MODEL=deepseek-v4-pro
+LLM_API_KEY=sk-你的Key
+LLM_BASE_URL=https://api.xiaomimimo.com/v1
+# 小米 MiMo 可用模型：mimo-v2.5 / mimo-v2.5-pro / mimo-v2.5-asr /
+#                   mimo-v2.5-tts / mimo-v2.5-tts-voiceclone / mimo-v2.5-tts-voicedesign
+# 注：MiMo-V2 系列已于 2026-06-30 下线
+LLM_MODEL=mimo-v2.5-pro
+# 故障转移（可选）：base_url|api_key|model，主端点异常时自动切换
+LLM_FAILOVER=https://api.deepseek.com/v1|sk-你的DeepSeekKey|deepseek-v4-flash
 ```
 
 ---
