@@ -71,6 +71,21 @@ class Settings(BaseSettings):
     DATA_DIR: str = str(BASE_DIR / "data")
     KNOWLEDGE_DIR: str = str(BASE_DIR / "data" / "knowledge")
 
+    # ---- 亚马逊 SP-API ----
+    # LWA（Login with Amazon）凭证 —— 在 Seller Central 注册开发者后获取
+    AMAZON_LWA_CLIENT_ID: str = ""
+    AMAZON_LWA_CLIENT_SECRET: str = ""
+    AMAZON_LWA_REFRESH_TOKEN: str = ""  # 卖家授权后获取
+    # AWS IAM 凭证 —— 用于 Signature V4 签名
+    AMAZON_AWS_ACCESS_KEY: str = ""
+    AMAZON_AWS_SECRET_KEY: str = ""
+    AMAZON_AWS_REGION: str = "us-east-1"
+    AMAZON_AWS_ROLE_ARN: str = ""  # STS AssumeRole（若使用 IAM Role）
+    # 默认站点
+    AMAZON_DEFAULT_MARKETPLACE: str = "US"  # US | EU | JP | UK 等
+    # 回调地址（OAuth 授权流程用）
+    AMAZON_OAUTH_REDIRECT_URI: str = "http://localhost:8000/api/v1/amazon/oauth/callback"
+
 
 @lru_cache
 def get_settings() -> Settings:

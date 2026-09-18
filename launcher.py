@@ -34,7 +34,7 @@ IS_WINDOWS = os.name == "nt"
 VENV_PY = BACKEND_DIR / ".venv" / (Path("Scripts") / "python.exe" if IS_WINDOWS else Path("bin") / "python")
 
 BACKEND_PORT = 8009
-FRONTEND_PORT = 5173
+FRONTEND_PORT = 5174
 BACKEND_URL = f"http://localhost:{BACKEND_PORT}"
 FRONTEND_URL = f"http://localhost:{FRONTEND_PORT}"
 
@@ -193,6 +193,10 @@ def ensure_deps() -> bool:
         say("[1/3] 后端依赖未变化，跳过安装", "gray")
     else:
         say("[1/3] 安装/更新后端依赖 ...", "blue")
+        # 先安装 SP-API 相关包（使用官方 PyPI 源，清华镜像可能未同步）
+        say("[1.1/3] 安装亚马逊 SP-API 依赖 ...", "blue")
+        run([str(VENV_PY), "-m", "pip", "install", "python-amazon-sp-api>=0.3.0", "boto3>=1.34.0", "-i", "https://pypi.org/simple/"], BACKEND_DIR)
+        # 再安装其他常规依赖
         if not run([str(VENV_PY), "-m", "pip", "install", "-r", str(req)], BACKEND_DIR):
             say("[错误] 后端依赖安装失败，请检查网络后重试。", "red")
             return False

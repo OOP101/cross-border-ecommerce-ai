@@ -52,6 +52,7 @@ const menus = [
   { path: '/copywriting', title: '智能文案', icon: 'EditPen' },
   { path: '/translation', title: '翻译引擎', icon: 'Switch' },
   { path: '/knowledge', title: '知识库管理', icon: 'Collection' },
+  { path: '/amazon', title: '亚马逊对接', icon: 'ShoppingCart' },
   { path: '/analytics', title: '数据洞察', icon: 'DataAnalysis' },
   { path: '/admin', title: '管理后台', icon: 'Setting' },
 ]

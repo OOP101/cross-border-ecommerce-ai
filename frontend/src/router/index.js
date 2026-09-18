@@ -39,6 +39,12 @@ const routes = [
         meta: { title: '知识库管理', icon: 'Collection' },
       },
       {
+        path: 'amazon',
+        name: 'Amazon',
+        component: () => import('../views/Amazon.vue'),
+        meta: { title: '亚马逊对接', icon: 'ShoppingCart' },
+      },
+      {
         path: 'analytics',
         name: 'Analytics',
         component: () => import('../views/Analytics.vue'),

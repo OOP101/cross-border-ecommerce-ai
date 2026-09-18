@@ -1,243 +1,118 @@
-# 国际贸易上市公司一站式智能服务平台
+# 国际贸易智能服务平台（跨境电商 AI 运营平台）
 
-基于 **MoPaaS 大模型应用引擎 + RAG + Agent** 打造的一站式外贸智能服务平台，帮助外贸企业「单人驾驭多语言交流」，显著降低对外贸业务员岗位的依赖。
+基于 **大模型 + RAG + Agent** 打造的一站式外贸智能运营平台，帮助外贸企业「单人驾驭多语言交流」，显著降低对外贸业务员岗位的依赖。
 
-> 当前仓库为**可运行脚手架**：LLM 主接入 **小米 MiMo V2.5**（`mimo-v2.5-pro`，备用 DeepSeek 故障转移），Embedding / 向量库默认 Mock / 内存（无需额外 Key 即可启动）；未配置 Key 时 LLM 自动降级 Mock，保证全流程可跑通。
+> 📌 完整项目文档（背景 / 架构 / 进度 / 踩坑 / 数据口径）见 [`docs/项目文档.md`](docs/项目文档.md)
 
-## 📸 界面预览
+---
+
+## 界面预览
 
 | 智能客服（RAG + Agent） | 智能文案 | 翻译引擎 |
 |:---:|:---:|:---:|
 | ![智能客服](docs/screenshots/chat.png) | ![智能文案](docs/screenshots/copywriting.png) | ![翻译引擎](docs/screenshots/translation.png) |
 
+---
+
+## 产品线全景
+
+平台由 **六条产品线 + 一个工程底座** 组成，各产品线共享同一套可插拔 AI 基础设施：
+
+| 产品线 | 核心能力 | 亮点 |
+|--------|----------|------|
+| 🤖 **智能客服** | 基于企业知识库的 RAG 问答，支持多轮对话、订单/物流/售后意图识别、高风险自动转人工 | **SSE 流式打字机**（思考过程 + 正文分事件推送）、回答**可溯源**（来源文件 + 相似度 + 片段摘要） |
+| 🌐 **多语言翻译** | 30+ 语种实时翻译（语言码透传 LLM），外贸术语强约束译法 | **持久化术语库**（FOB/CIF/L/C 注入 Prompt）+ **两级翻译记忆**（进程内 LRU 1 万条 + SQLite，跨重启命中） |
+| ✍️ **智能文案** | 商品标题 / 详情描述 / 广告语 / SEO 标签一键生成，多语言输出 | **asyncio 多段并发生成**，延迟从四段串行之和降为最慢单段；支持批量商品 |
+| 📚 **知识资产** | 企业知识库上传 → 解析（PDF/Word/MD/TXT/CSV）→ 清洗（含 PII 脱敏）→ 语义分块 → 向量化 | 多租户隔离（tenant_id 全链路 + 检索层过滤防跨租户泄漏）、同名替换与按 doc_id 精确删除 |
+| 📊 **数据洞察** | 运营看板：会话量 / 平均延迟 / 满意度 / 意图分布 / Token 成本 / 近 7 日趋势 | 按租户隔离统计，高频问题 Top N |
+| 🔌 **平台对接** | 亚马逊 SP-API：OAuth 授权、订单 / 商品目录 / FBA 库存 / 报表，覆盖 10 大站点（US/UK/DE/JP 等） | **AI 联动闭环**：订单智能分析、热销商品自动生成文案、客服订单上下文、商品描述批量翻译（代码已落地，配置凭证后联调） |
+
+### 工程底座（全产品线共享）
+
+- **四大可插拔抽象层**（工厂模式 + Mock 降级）：LLM / Embedding / 向量库 / Agent——无 API Key 全流程可跑通，换供应商只改 `.env` 三行
+- **LLM 多端点故障转移**：备用端点链，主端点连接失败 / 超时 / 429 / 5xx / 401·403 密钥失效时自动切换（流式首片段前生效）；当前主通道腾讯 TokenHub `deepseek-v4-flash`，备用 `hy-mt2-pro`
+- **混合检索**：向量 + BM25 双路召回 + RRF 融合（k=60）+ 可插拔重排序；BM25 索引与向量矩阵双层缓存，检索毫秒级
+- **安全**：PBKDF2 + HS256 JWT 零第三方依赖、注册防提权 + 管理员授权、CORS 白名单自适应、PII 脱敏、审计日志
+- **工程化**：Alembic 数据库迁移、Docker Compose（生产多 worker / 健康检查）、跨平台一键启动器、25 项自动化测试
 
 ---
 
-## ✨ 核心能力
-
-| 模块 | 说明 | 状态 |
-|------|------|------|
-| 智能文案生成 | 商品描述 / 广告语 / 活动文案 / SEO 标签，多语言 | ✅ |
-| 多语言翻译引擎 | 30+ 语种实时翻译 + **持久化术语库** + 翻译记忆 | ✅ |
-| RAG 智能客服 | 混合检索 + 重排序 + 知识溯源 + 多轮对话 | ✅ |
-| 知识库管理 | 多格式上传、清洗、分块、向量化、增量更新 | ✅ |
-| 数据洞察 | 客服满意度、意图分布、Token 消耗看板 | ✅ |
-| 管理后台 | 模型配置、知识库、监控告警、审计日志 | ✅ |
-
----
-
-## 🏗️ 架构
-
-四层分层架构：
+## 架构
 
 ```
-用户交互层   Web端 | 移动端 | REST API | 微信/WhatsApp 等渠道
-服务编排层   对话管理 | 意图识别 | 上下文管理 | Agent 工作流编排(LangGraph)
-RAG检索层    问题解析 | 混合检索(BM25+向量) | 重排序 | 上下文拼接
-数据模型层   向量库 | 知识库 | LLM推理引擎 | 翻译模型 | 缓存
+用户交互层   Vue3 Web 端 | REST API | 微信/WhatsApp（预留）
+服务编排层   意图识别 | 上下文管理 | Agent 工作流 | SSE 流式
+RAG 检索层   混合检索(向量+BM25) | RRF 融合(K=60) | 重排序 | 知识溯源
+数据模型层   向量库 | 知识库 | LLM(多端点故障转移) | 术语库/翻译记忆
+平台对接层   亚马逊 SP-API（订单/目录/库存/报表）→ AI 联动
 ```
-
-详细设计见 [docs_跨境电商一站式智能服务平台/02-需求进度/项目大纲.md](docs_跨境电商一站式智能服务平台/02-需求进度/项目大纲.md)。
 
 ---
 
-## 🚀 快速开始
+## 快速开始
 
-### 环境要求
-- Python ≥ 3.11（推荐 3.13）
-- Node.js ≥ 18（前端开发）
-
-### 一键启动（推荐）
-
-双击 `start.bat`，或命令行运行：
+环境要求：Python ≥ 3.11、Node.js ≥ 18
 
 ```bash
-python launcher.py            # 交互菜单
-python launcher.py start      # 启动（依赖未变化时秒级启动，自动打开浏览器）
-python launcher.py stop       # 一键停止前后端服务
-python launcher.py restart    # 重启
-python launcher.py status     # 查看服务运行状态
+python launcher.py start      # 一键启动（依赖未变化时秒级启动，自动打开浏览器）
+python launcher.py stop       # 一键停止
+python launcher.py status     # 服务状态自检
 ```
 
-v2 启动器特性：依赖缓存（requirements.txt / package.json 未变化则跳过安装）、一键停止（按端口反查 PID）、端口被占用时可交互式释放、彩色状态输出。Windows 下也可直接双击 `start.bat` / `stop.bat` / `status.bat`。
+| 服务 | 地址 |
+|------|------|
+| 前端页面 | http://localhost:5174 |
+| 后端 API | http://localhost:8009 |
+| 接口文档（Swagger） | http://localhost:8009/docs |
 
-### 1. 启动后端（手动方式）
-
-```bash
-cd backend
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# Linux/macOS
-source .venv/bin/activate
-
-pip install -r requirements.txt
-
-# 导入示例知识库（可选，用于体验 RAG 效果）
-python scripts/ingest.py
-
-# 启动服务
-uvicorn app.main:app --reload --port 8009
-```
-
-接口文档（Swagger）：http://localhost:8009/docs
-
-### 2. 启动前端
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-访问 http://localhost:5173
+- 默认管理员 `admin / admin123`（生产务必修改）
+- 不配置 `LLM_API_KEY` 自动降级 Mock，全流程可跑通；接入真实模型改 `backend/.env` 三行即可
+- 亚马逊对接需在 `backend/.env` 配置 LWA + AWS IAM 凭证，详见 [`docs/操作手册.md`](docs/操作手册.md) 第四章
 
 ---
 
-## ⚙️ 环境配置指南
-
-### 哪些文件不随仓库分发？（不是隐藏，是真实不存在）
-
-以下内容被 `.gitignore` 排除，**克隆仓库后本地不会有**，需要按下面步骤自行生成：
-
-| 未上传内容 | 原因 | 克隆后如何获得 |
-|---|---|---|
-| `.env` / `backend/.env` | 含 API Key 等敏感信息，**严禁入库** | 复制 `.env.example` 为 `.env` 并填写 |
-| `backend/.venv/` | Python 虚拟环境体积大、平台相关 | `python -m venv .venv` + `pip install` |
-| `frontend/node_modules/` | npm 依赖体积大 | `npm install` |
-| `backend/data/*.db` | 运行时数据库 | 首次启动自动创建 |
-| `backend/data/chroma/`、`index/` | 向量库持久化数据 | 重新执行 `python scripts/ingest.py` |
-| `*.log` | 运行日志 | 自动生成 |
-
-### 配置步骤（克隆后必读）
+## 测试与数据口径
 
 ```bash
-# 1) 生成环境配置（根目录 .env 供 docker-compose 使用；backend/.env 供源码开发使用）
-cp .env.example .env
-cp .env.example backend/.env
-
-# 2) 编辑 .env，至少填写 LLM_API_KEY（不填则自动降级为 Mock 模式，流程可跑通但无真实 AI 输出）
-
-# 3) 验证配置是否生效
-cd backend && .venv/Scripts/python.exe scripts/check_config.py
+cd backend && pytest tests/
 ```
 
-### 关键配置项说明（`.env`）
+- **25 项自动化测试**（单元 14 + 冒烟 8 + 租户隔离 3），实测 23 过 2 挂（2 例依赖真实 LLM Key，账户欠费 402 即挂）
+- 检索质量：自建 **52 条评测集**驱动调优，当前 **Recall@3 = 100%、MRR = 0.942**（Mock Embedding 前提，`scripts/eval_rag.py` 可一键复跑；接真实 Embedding 后需重调）
 
-| 配置项 | 默认值 | 说明 |
-|---|---|---|
-| `LLM_PROVIDER` | `openai_compatible` | `mock`（离线演示）/ `openai_compatible`（任意 OpenAI 兼容接口） |
-| `LLM_API_KEY` | 空 | 大模型 API Key，**必填**才能获得真实 AI 能力 |
-| `LLM_BASE_URL` | 小米 MiMo | OpenAI 兼容 Base URL |
-| `LLM_MODEL` | `mimo-v2.5-pro` | 模型 ID，见下方模型清单 |
-| `LLM_TIMEOUT` | `60` | 单次请求超时（秒）；推理型模型建议 ≥ 60 |
-| `LLM_FAILOVER` | DeepSeek 备用 | 格式 `base_url\|api_key\|model`，主端点异常/429/5xx 时自动切换 |
-| `EMBEDDING_PROVIDER` | `mock` | `mock` 离线向量 / `openai_compatible` 真实嵌入 |
-| `VECTOR_STORE` | `memory` | `memory`（开发）/ `chroma`（生产持久化） |
-| `DATABASE_URL` | SQLite | 默认 `sqlite:///./data/app.db`，可换 PostgreSQL/MySQL |
-| `AUTH_REQUIRED` | `false` | 演示免登录；生产改 `true` 启用 JWT 鉴权 |
-| `JWT_SECRET_KEY` | 开发默认值 | **生产必须替换**：`python -c "import secrets; print(secrets.token_urlsafe(48))"` |
-
-### 大模型供应商切换（改 3 行即可）
-
-```ini
-# 小米 MiMo（项目默认）——模型清单（2026-09 实测可用）：
-#   mimo-v2.5 / mimo-v2.5-pro / mimo-v2.5-asr /
-#   mimo-v2.5-tts / mimo-v2.5-tts-voiceclone / mimo-v2.5-tts-voicedesign
-# 注：MiMo-V2 系列已于 2026-06-30 下线
-LLM_BASE_URL=https://api.xiaomimimo.com/v1
-LLM_MODEL=mimo-v2.5-pro
-LLM_API_KEY=sk-你的小米Key
-
-# DeepSeek
-# LLM_BASE_URL=https://api.deepseek.com/v1
-# LLM_MODEL=deepseek-v4-pro
-# LLM_API_KEY=sk-你的DeepSeekKey
-
-# 通义千问（DashScope 兼容模式）
-# LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-# LLM_MODEL=qwen-plus
-# LLM_API_KEY=sk-你的DashScopeKey
-
-# 故障转移示例（主端点异常时自动切 DeepSeek）
-LLM_FAILOVER=https://api.deepseek.com/v1|sk-你的DeepSeekKey|deepseek-v4-flash
-```
-
-> 模型选择建议：智能客服等交互场景用 `mimo-v2.5`（非推理，1~3 秒响应）；深度分析用 `mimo-v2.5-pro`（推理型，思考期约 10~20 秒，前端会实时展示思考进度）。
-
-### 安全提醒
-
-- `.env` 已被 `.gitignore` 排除，**永远不会**被 `git add -A` 提交；若曾误提交，请立即吊销对应 Key。
-- 生产环境：`AUTH_REQUIRED=true` + 强随机 `JWT_SECRET_KEY` + 关闭 `CORS_ORIGINS=["*"]`（改为具体域名）。
+> 所有对外数字均可在代码与评测脚本中复现，详见 [`docs/项目文档.md`](docs/项目文档.md) 第九章数据口径。
 
 ---
 
-## 📁 目录结构
+## 文档导航
+
+| 文档 | 内容 |
+|------|------|
+| [`docs/项目文档.md`](docs/项目文档.md) | 项目唯一权威文档：背景 / 架构 / 进度 / 踩坑 / 数据口径 |
+| [`docs/操作手册.md`](docs/操作手册.md) | 启动 / 鉴权 / 各模块接口示例 / 亚马逊对接配置 |
+| [`docs/升级推进/`](docs/升级推进/) | V2.0 多平台对接分期推进计划（P0/P1/P2） |
+| [`docs/简历面试/`](docs/简历面试/) | 简历项目经历 / 技术详解与面试问答 |
+
+---
+
+## 目录结构
 
 ```
 ├── backend/                 # FastAPI 后端
-│   ├── app/
-│   │   ├── main.py          # 应用入口
-│   │   ├── config.py        # 配置（pydantic-settings）
-│   │   ├── api/v1/          # 六大模块 REST API
-│   │   ├── core/            # LLM / Embedding / 向量库 抽象
-│   │   ├── services/        # RAG / 客服 / 文案 / 翻译 / Agent / 洞察
-│   │   ├── models/          # Pydantic schemas
-│   │   ├── db/              # SQLAlchemy 数据模型
-│   │   └── utils/           # 分块 / 清洗 / PII / 分词
-│   ├── data/knowledge/      # 示例知识库文档
-│   └── scripts/ingest.py    # 知识导入脚本
-├── frontend/                # Vue 3 + Element Plus
-│   └── src/views/           # 六大功能页面
-├── docs_跨境电商一站式智能服务平台/  # 需求、汇报与设计文档
-└── docker-compose.yml       # 本地编排
+│   ├── app/api/v1/          # REST API（六大模块 + 亚马逊 SP-API + 鉴权）
+│   ├── app/core/            # LLM / Embedding / 向量库 / 安全 / 亚马逊客户端
+│   ├── app/services/        # RAG / 客服 / 文案 / 翻译 / 洞察 / 亚马逊 AI 联动
+│   ├── app/db/              # SQLAlchemy 模型（8 张表）+ Alembic 迁移
+│   ├── tests/               # 单元 / 冒烟 / 租户隔离测试
+│   └── scripts/             # ingest / eval_rag / check_config
+├── frontend/                # Vue 3 + Element Plus（六大页面 + 登录）
+├── docs/                    # 项目文档 / 操作手册 / 升级推进 / 简历面试
+├── launcher.py              # 一键启动器
+└── docker-compose*.yml      # 本地 / 生产编排
 ```
 
 ---
 
-## 🔌 可插拔设计
-
-所有外部能力均通过抽象接口隔离，配置切换即可替换：
-
-- **LLM**：`core/llm` —— `mock` / `openai_compatible`（通义千问、DeepSeek、OpenAI 等）
-- **Embedding**：`core/embeddings` —— `mock` / `openai_compatible` / `sentence-transformers`
-- **向量库**：`core/vector_store` —— `memory` / `chroma`（可扩展 Milvus）
-- **Agent**：`services/agent` —— 内置规则路由，安装 `langgraph` 后自动升级为图编排
-
----
-
-## 🔐 鉴权与术语库
-
-### 鉴权（JWT，零第三方依赖）
-- 基于标准库实现 PBKDF2 密码哈希 + HS256 JWT（`app/core/security.py`），无需安装 `pyjwt` / `passlib`。
-- 演示模式 `AUTH_REQUIRED=false` 时管理后台等接口免登录；生产在 `.env` 设 `AUTH_REQUIRED=true` 后，接口需携带 `Authorization: Bearer <token>`。
-- 默认播种管理员：`admin / admin123`（**生产务必修改**）。
-
-```bash
-# 登录获取令牌
-curl -X POST http://localhost:8009/api/v1/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"admin","password":"admin123"}'
-
-# 携带令牌访问受保护接口
-curl http://localhost:8009/api/v1/admin/status \
-  -H 'Authorization: Bearer <token>'
-```
-
-### 术语库（P0 专业术语库，已持久化）
-- 术语存于数据库表 `terminology`，随知识库一起增量更新，保证多语言译法一致。
-- 管理接口：`GET/POST /api/v1/translation/terminology`。
-
-### 配置自检
-无需 API Key 即可确认当前生效的实现：
-
-```bash
-cd backend
-.venv/Scripts/python.exe scripts/check_config.py
-```
-
----
-
-## 📄 许可
+## 许可
 
 内部项目脚手架，遵循公司数据安全与合规要求。
