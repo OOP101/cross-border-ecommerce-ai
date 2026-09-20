@@ -11,6 +11,10 @@
 | 智能客服（RAG + Agent） | 智能文案 | 翻译引擎 |
 |:---:|:---:|:---:|
 | ![智能客服](docs/screenshots/chat.png) | ![智能文案](docs/screenshots/copywriting.png) | ![翻译引擎](docs/screenshots/translation.png) |
+| **知识库管理** | **亚马逊对接** | **客户管理 CRM** |
+| ![知识库管理](docs/screenshots/knowledge.png) | ![亚马逊对接](docs/screenshots/amazon.png) | ![客户管理](docs/screenshots/crm.png) |
+| **商品管理** | **数据洞察** | **管理后台** |
+| ![商品管理](docs/screenshots/products.png) | ![数据洞察](docs/screenshots/analytics.png) | ![管理后台](docs/screenshots/admin.png) |
 
 ---
 
