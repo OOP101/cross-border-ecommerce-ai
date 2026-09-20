@@ -2,6 +2,7 @@
 import logging
 from typing import Optional
 
+from app.config import settings
 from app.core.amazon.sp_api_client import get_amazon_client
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,17 @@ def search_catalog_items(
     Returns:
         商品列表
     """
+    if settings.AMAZON_MOCK_MODE:
+        logger.info(f"[Mock] 返回模拟商品搜索结果 (keywords={keywords})")
+        return [
+            {
+                "asin": "B08N5WRWNW",
+                "title": f"Mock Product - {keywords}",
+                "brand": "MockBrand",
+                "price": {"amount": 89.99, "currency_code": "USD"},
+            },
+        ]
+
     client = get_amazon_client(marketplace_code)
     catalog = client.catalog_items()
 
@@ -49,6 +61,15 @@ def get_catalog_item(asin: str, marketplace_code: Optional[str] = None) -> dict:
     Returns:
         商品详情
     """
+    if settings.AMAZON_MOCK_MODE:
+        logger.info(f"[Mock] 返回模拟商品详情 (asin={asin})")
+        return {
+            "asin": asin,
+            "title": "Mock Product Title",
+            "brand": "MockBrand",
+            "price": {"amount": 89.99, "currency_code": "USD"},
+        }
+
     client = get_amazon_client(marketplace_code)
     catalog = client.catalog_items()
 

@@ -2,6 +2,7 @@
 import logging
 from typing import Optional
 
+from app.config import settings
 from app.core.amazon.sp_api_client import get_amazon_client
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,18 @@ def get_inventory_summary(
     Returns:
         库存汇总列表
     """
+    if settings.AMAZON_MOCK_MODE:
+        logger.info("[Mock] 返回模拟库存汇总数据")
+        return [
+            {
+                "asin": "B08N5WRWNW",
+                "fn_sku": "MOCK-FN-001",
+                "total_quantity": 150,
+                "available_quantity": 120,
+                "reserved_quantity": 30,
+            },
+        ]
+
     client = get_amazon_client(marketplace_code)
     inventories = client.inventories()
 

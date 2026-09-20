@@ -23,6 +23,10 @@ def get_authorization_url(state: str = "") -> str:
     Returns:
         完整的授权 URL
     """
+    if settings.AMAZON_MOCK_MODE:
+        logger.info("[Mock] 返回模拟授权 URL")
+        return f"http://localhost:8009/api/v1/amazon/oauth/callback?spapi_oauth_code=mock_auth_code&state={state}"
+
     params = {
         "client_id": settings.AMAZON_LWA_CLIENT_ID,
         "scope": "sellingpartnerapi::orders sellingpartnerapi::products sellingpartnerapi::inventory sellingpartnerapi::reports",
@@ -42,6 +46,15 @@ async def exchange_authorization_code(auth_code: str) -> dict:
     Returns:
         包含 refresh_token、access_token 等信息的字典
     """
+    if settings.AMAZON_MOCK_MODE:
+        logger.info("[Mock] 返回模拟 token 数据")
+        return {
+            "access_token": "mock_access_token_xxxxx",
+            "refresh_token": "mock_refresh_token_xxxxx",
+            "token_type": "bearer",
+            "expires_in": 3600,
+        }
+
     async with httpx.AsyncClient() as client:
         response = await client.post(
             LWA_TOKEN_URL,
@@ -67,6 +80,10 @@ async def refresh_access_token(refresh_token: Optional[str] = None) -> str:
     Returns:
         新的 access_token
     """
+    if settings.AMAZON_MOCK_MODE:
+        logger.info("[Mock] 返回模拟 access_token")
+        return "mock_access_token_xxxxx"
+
     token = refresh_token or settings.AMAZON_LWA_REFRESH_TOKEN
     if not token:
         raise ValueError("未提供 refresh_token，请先完成 OAuth 授权")

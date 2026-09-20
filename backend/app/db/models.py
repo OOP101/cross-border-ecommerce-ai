@@ -102,3 +102,60 @@ class TranslationMemory(Base):
     hash: Mapped[str] = mapped_column(String(32), unique=True, index=True)  # md5(src:tgt:text)
     translated: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Customer(Base):
+    """客户信息表。"""
+    __tablename__ = "customers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[str] = mapped_column(String(64), default="default", server_default="default", index=True)
+    company_name: Mapped[str] = mapped_column(String(255), index=True)
+    contact_person: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    industry: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    grade: Mapped[str] = mapped_column(String(10), default="C")  # A/B/C/D
+    source: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # amazon/exhibition/website/referral
+    tags: Mapped[str] = mapped_column(Text, default="[]")  # JSON 数组
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class FollowUp(Base):
+    """客户跟进记录。"""
+    __tablename__ = "follow_ups"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[str] = mapped_column(String(64), default="default", server_default="default", index=True)
+    customer_id: Mapped[int] = mapped_column(Integer, index=True)
+    contact_type: Mapped[str] = mapped_column(String(20))  # phone/email/meeting/other
+    content: Mapped[str] = mapped_column(Text)
+    next_follow_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    created_by: Mapped[str] = mapped_column(String(64), default="system")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Product(Base):
+    """商品信息表。"""
+    __tablename__ = "products"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[str] = mapped_column(String(64), default="default", server_default="default", index=True)
+    sku: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(255), index=True)
+    category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    brand: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    cost_price: Mapped[float] = mapped_column(Float, default=0.0)  # 成本价
+    selling_price: Mapped[float] = mapped_column(Float, default=0.0)  # 售价
+    currency: Mapped[str] = mapped_column(String(10), default="USD")
+    stock_quantity: Mapped[int] = mapped_column(Integer, default=0)
+    amazon_asin: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, index=True)
+    amazon_marketplace: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="active")  # active/inactive
+    images: Mapped[str] = mapped_column(Text, default="[]")  # JSON 数组
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())

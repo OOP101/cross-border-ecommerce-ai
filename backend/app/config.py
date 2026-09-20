@@ -72,6 +72,8 @@ class Settings(BaseSettings):
     KNOWLEDGE_DIR: str = str(BASE_DIR / "data" / "knowledge")
 
     # ---- 亚马逊 SP-API ----
+    # Mock 模式：启用后使用模拟数据，无需真实亚马逊凭证
+    AMAZON_MOCK_MODE: bool = True
     # LWA（Login with Amazon）凭证 —— 在 Seller Central 注册开发者后获取
     AMAZON_LWA_CLIENT_ID: str = ""
     AMAZON_LWA_CLIENT_SECRET: str = ""

@@ -8,7 +8,7 @@
         :key="t.type"
         class="template-card"
         :class="{ active: form.copy_type === t.type }"
-        @click="form.copy_type = t.type"
+        @click="selectTemplate(t.type)"
       >
         <div class="t-icon">{{ t.icon }}</div>
         <div class="t-name">{{ t.name }}</div>
@@ -18,6 +18,15 @@
         </div>
       </div>
     </div>
+    <!-- 当前模板提示 -->
+    <el-alert
+      v-if="currentTemplate"
+      :title="`已选择：${currentTemplate.name} - 将生成：${currentTemplate.outputs.join('、')}`"
+      type="success"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 20px"
+    />
 
     <!-- 二、示例商品一键填充 -->
     <div class="section-title">② 一键填充示例商品（或手动填写）</div>
@@ -166,6 +175,13 @@ const loading = ref(false)
 const result = ref(null)
 
 const currentTemplate = computed(() => templates.find((t) => t.type === form.value.copy_type))
+
+const selectTemplate = (type) => {
+  form.value.copy_type = type
+  // 清空之前的生成结果
+  result.value = null
+  ElMessage.success(`已切换到「${templates.find(t => t.type === type)?.name}」模板`)
+}
 
 const applyPreset = (p) => {
   form.value.product_name = p.name

@@ -45,6 +45,18 @@ const routes = [
         meta: { title: '亚马逊对接', icon: 'ShoppingCart' },
       },
       {
+        path: 'crm',
+        name: 'CRM',
+        component: () => import('../views/CRM.vue'),
+        meta: { title: '客户管理', icon: 'User' },
+      },
+      {
+        path: 'products',
+        name: 'Products',
+        component: () => import('../views/Products.vue'),
+        meta: { title: '商品管理', icon: 'Goods' },
+      },
+      {
         path: 'analytics',
         name: 'Analytics',
         component: () => import('../views/Analytics.vue'),

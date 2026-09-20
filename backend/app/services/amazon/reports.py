@@ -2,6 +2,7 @@
 import logging
 from typing import Optional
 
+from app.config import settings
 from app.core.amazon.sp_api_client import get_amazon_client
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,14 @@ def create_report(
     Returns:
         报表请求信息（包含 reportId）
     """
+    if settings.AMAZON_MOCK_MODE:
+        logger.info(f"[Mock] 创建模拟报表 (type={report_type})")
+        return {
+            "reportId": "MOCK-REPORT-001",
+            "reportType": report_type,
+            "processingStatus": "DONE",
+        }
+
     client = get_amazon_client(marketplace_code)
     reports_api = client.reports()
 
@@ -62,6 +71,14 @@ def get_report(report_id: str, marketplace_code: Optional[str] = None) -> dict:
     Returns:
         报表状态信息
     """
+    if settings.AMAZON_MOCK_MODE:
+        logger.info(f"[Mock] 返回模拟报表状态 (report_id={report_id})")
+        return {
+            "reportId": report_id,
+            "reportType": "MOCK_REPORT",
+            "processingStatus": "DONE",
+        }
+
     client = get_amazon_client(marketplace_code)
     reports_api = client.reports()
 
@@ -83,6 +100,13 @@ def get_report_document(report_document_id: str, marketplace_code: Optional[str]
     Returns:
         报表文档信息（包含下载 URL）
     """
+    if settings.AMAZON_MOCK_MODE:
+        logger.info(f"[Mock] 返回模拟报表文档 (document_id={report_document_id})")
+        return {
+            "reportDocumentId": report_document_id,
+            "url": "https://example.com/mock-report.csv",
+        }
+
     client = get_amazon_client(marketplace_code)
     reports_api = client.reports()
 

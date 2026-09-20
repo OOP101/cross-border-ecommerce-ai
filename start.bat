@@ -3,6 +3,7 @@ setlocal
 cd /d "%~dp0"
 title IntlTrade Platform Launcher
 chcp 65001 >nul 2>nul
+set PYTHONIOENCODING=utf-8
 where python >nul 2>nul
 if errorlevel 1 (
     echo [ERROR] Python not found. Install Python 3.11+ and check "Add to PATH".

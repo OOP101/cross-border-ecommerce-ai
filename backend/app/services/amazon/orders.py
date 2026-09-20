@@ -3,6 +3,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
+from app.config import settings
 from app.core.amazon.sp_api_client import get_amazon_client
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,33 @@ def get_recent_orders(
     Returns:
         订单列表
     """
+    if settings.AMAZON_MOCK_MODE:
+        logger.info("[Mock] 返回模拟订单数据")
+        now = datetime.utcnow()
+        return [
+            {
+                "AmazonOrderId": "MOCK-001-1234567-1234567",
+                "OrderStatus": "Shipped",
+                "PurchaseDate": (now - timedelta(days=1)).isoformat(),
+                "OrderTotal": {"CurrencyCode": "USD", "Amount": "89.99"},
+                "ShippingAddress": {"City": "New York", "CountryCode": "US"},
+            },
+            {
+                "AmazonOrderId": "MOCK-001-1234567-1234568",
+                "OrderStatus": "Unshipped",
+                "PurchaseDate": (now - timedelta(days=2)).isoformat(),
+                "OrderTotal": {"CurrencyCode": "USD", "Amount": "149.50"},
+                "ShippingAddress": {"City": "Los Angeles", "CountryCode": "US"},
+            },
+            {
+                "AmazonOrderId": "MOCK-001-1234567-1234569",
+                "OrderStatus": "Shipped",
+                "PurchaseDate": (now - timedelta(days=3)).isoformat(),
+                "OrderTotal": {"CurrencyCode": "USD", "Amount": "59.99"},
+                "ShippingAddress": {"City": "Chicago", "CountryCode": "US"},
+            },
+        ]
+
     client = get_amazon_client(marketplace_code)
     orders_api = client.orders()
 
@@ -55,6 +83,17 @@ def get_order_detail(order_id: str, marketplace_code: Optional[str] = None) -> d
     Returns:
         订单详情
     """
+    if settings.AMAZON_MOCK_MODE:
+        logger.info(f"[Mock] 返回模拟订单详情 (order_id={order_id})")
+        now = datetime.utcnow()
+        return {
+            "AmazonOrderId": order_id,
+            "OrderStatus": "Shipped",
+            "PurchaseDate": (now - timedelta(days=1)).isoformat(),
+            "OrderTotal": {"CurrencyCode": "USD", "Amount": "89.99"},
+            "ShippingAddress": {"City": "New York", "CountryCode": "US"},
+        }
+
     client = get_amazon_client(marketplace_code)
     orders_api = client.orders()
 
@@ -76,6 +115,17 @@ def get_order_items(order_id: str, marketplace_code: Optional[str] = None) -> li
     Returns:
         订单商品列表
     """
+    if settings.AMAZON_MOCK_MODE:
+        logger.info(f"[Mock] 返回模拟订单商品 (order_id={order_id})")
+        return [
+            {
+                "ASIN": "B08N5WRWNW",
+                "Title": "Wireless Bluetooth Headphones",
+                "QuantityOrdered": 1,
+                "ItemPrice": {"CurrencyCode": "USD", "Amount": "89.99"},
+            },
+        ]
+
     client = get_amazon_client(marketplace_code)
     orders_api = client.orders()
 
